@@ -1,40 +1,64 @@
-import 'dart:convert';
+'''import 'dart:convert';
 import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:isar/isar.dart';
 import 'package:path_provider/path_provider.dart';
+import '../models/customer.dart';
 import '../models/repair_ticket.dart';
 
 class DatabaseService {
-  // Singleton pattern (ensures we only have one database connection)
   static final DatabaseService _instance = DatabaseService._internal();
   factory DatabaseService() => _instance;
   DatabaseService._internal();
 
   late Isar isar;
 
-  // 1. Initialize Database
   Future<void> initialize() async {
     final dir = await getApplicationDocumentsDirectory();
     isar = await Isar.open(
-      [RepairTicketSchema], // From the generated file
+      [RepairTicketSchema, CustomerSchema], 
       directory: dir.path,
     );
   }
 
-  // 2. Add a new Repair
-  Future<void> addRepair(RepairTicket newTicket) async {
+  // Customer Methods
+  Future<void> addCustomer(Customer newCustomer) async {
     await isar.writeTxn(() async {
-      await isar.repairTickets.put(newTicket);
+      await isar.customers.put(newCustomer);
     });
   }
 
-  // 3. Get All Repairs
+  Future<List<Customer>> getAllCustomers() async {
+    return await isar.customers.where().findAll();
+  }
+
+  Future<void> updateCustomer(Customer updatedCustomer) async {
+    await isar.writeTxn(() async {
+      await isar.customers.put(updatedCustomer);
+    });
+  }
+
+  Future<bool> deleteCustomer(int id) async {
+    bool success = false;
+    await isar.writeTxn(() async {
+      success = await isar.customers.delete(id);
+    });
+    return success;
+  }
+  
+  // Repair Ticket Methods
+  Future<void> addRepair(RepairTicket newTicket, Customer customer) async {
+    await isar.writeTxn(() async {
+      newTicket.customer.value = customer;
+      await isar.repairTickets.put(newTicket);
+      await newTicket.customer.save();
+    });
+  }
+
   Future<List<RepairTicket>> getAllRepairs() async {
     return await isar.repairTickets.where().findAll();
   }
 
-  // 4. Update Status (e.g., from Pending to Completed)
   Future<void> updateStatus(int id, RepairStatus newStatus) async {
     await isar.writeTxn(() async {
       final ticket = await isar.repairTickets.get(id);
@@ -45,16 +69,14 @@ class DatabaseService {
     });
   }
 
-  // 5. Delete a Repair Ticket
   Future<bool> deleteRepair(int id) async {
     bool success = false;
     await isar.writeTxn(() async {
       success = await isar.repairTickets.delete(id);
     });
-    return success; // Returns true if the ticket was deleted, false otherwise
+    return success;
   }
 
-  // 6. Update Photo Path
   Future<void> updatePhotoPath(int id, String? photoPath) async {
     await isar.writeTxn(() async {
       final ticket = await isar.repairTickets.get(id);
@@ -65,7 +87,6 @@ class DatabaseService {
     });
   }
 
-  // 7. Update Paid Status
   Future<void> updatePaidStatus(int id, bool isPaid) async {
     await isar.writeTxn(() async {
       final ticket = await isar.repairTickets.get(id);
@@ -76,18 +97,29 @@ class DatabaseService {
     });
   }
 
-  // 8. Backup all tickets to JSON file
+  // Backup and Restore
   Future<File?> backupToFile(String backupPath) async {
     try {
       final tickets = await getAllRepairs();
+      final customers = await getAllCustomers();
+
+      // We need to load the linked customer for each ticket
+      for (var ticket in tickets) {
+        await ticket.customer.load();
+      }
+
       final backupData = {
-        'version': '1.0',
+        'version': '2.0', // New version for customer support
         'backupDate': DateTime.now().toIso8601String(),
-        'ticketCount': tickets.length,
+        'customers': customers.map((customer) => {
+          'id': customer.id,
+          'name': customer.name,
+          'phoneNumber': customer.phoneNumber,
+          'email': customer.email,
+        }).toList(),
         'tickets': tickets.map((ticket) => {
           'id': ticket.id,
-          'customerName': ticket.customerName,
-          'customerPhoneNumber': ticket.customerPhoneNumber,
+          'customerId': ticket.customer.value?.id, // Link to customer
           'deviceType': ticket.deviceType,
           'deviceModel': ticket.deviceModel,
           'issueDescription': ticket.issueDescription,
@@ -109,7 +141,6 @@ class DatabaseService {
     }
   }
 
-  // 9. Restore tickets from JSON backup file
   Future<String> restoreFromFile(String backupPath) async {
     try {
       final file = File(backupPath);
@@ -120,21 +151,45 @@ class DatabaseService {
       final jsonString = await file.readAsString();
       final backupData = jsonDecode(jsonString) as Map<String, dynamic>;
 
-      if (backupData['tickets'] == null) {
+      if (backupData['customers'] == null || backupData['tickets'] == null) {
         return 'Invalid backup file format';
       }
 
+      final customersData = backupData['customers'] as List<dynamic>;
       final ticketsData = backupData['tickets'] as List<dynamic>;
-      int restoredCount = 0;
-      int skippedCount = 0;
+      int restoredCustomers = 0;
+      int restoredTickets = 0;
+      int skippedCustomers = 0;
+      int skippedTickets = 0;
 
       await isar.writeTxn(() async {
+        // Restore customers first
+        for (var customerData in customersData) {
+          try {
+            final customer = Customer()
+              ..id = customerData['id'] as int? ?? Isar.autoIncrement
+              ..name = customerData['name'] as String?
+              ..phoneNumber = customerData['phoneNumber'] as String?
+              ..email = customerData['email'] as String?;
+
+            final existing = await isar.customers.get(customer.id);
+            if (existing == null) {
+              await isar.customers.put(customer);
+              restoredCustomers++;
+            } else {
+              skippedCustomers++;
+            }
+          } catch (e) {
+            debugPrint('Error restoring customer: $e');
+            skippedCustomers++;
+          }
+        }
+        
+        // Restore tickets
         for (var ticketData in ticketsData) {
           try {
             final ticket = RepairTicket()
               ..id = ticketData['id'] as int? ?? Isar.autoIncrement
-              ..customerName = ticketData['customerName'] as String?
-              ..customerPhoneNumber = ticketData['customerPhoneNumber'] as String?
               ..deviceType = ticketData['deviceType'] as String?
               ..deviceModel = ticketData['deviceModel'] as String?
               ..issueDescription = ticketData['issueDescription'] as String?
@@ -149,24 +204,36 @@ class DatabaseService {
               ..isPaid = ticketData['isPaid'] as bool? ?? false
               ..photoPath = ticketData['photoPath'] as String?;
 
-            // Check if ticket with same ID already exists
+            final customerId = ticketData['customerId'] as int?;
+            if (customerId != null) {
+              final customer = await isar.customers.get(customerId);
+              if (customer != null) {
+                ticket.customer.value = customer;
+              }
+            }
+            
             final existing = await isar.repairTickets.get(ticket.id);
             if (existing == null) {
               await isar.repairTickets.put(ticket);
-              restoredCount++;
+              await ticket.customer.save();
+              restoredTickets++;
             } else {
-              skippedCount++;
+              skippedTickets++;
             }
           } catch (e) {
             debugPrint('Error restoring ticket: $e');
-            skippedCount++;
+            skippedTickets++;
           }
         }
       });
 
-      return 'Restored $restoredCount tickets${skippedCount > 0 ? ', skipped $skippedCount duplicates' : ''}';
+      String customerMessage = 'Restored $restoredCustomers customers${skippedCustomers > 0 ? ', skipped $skippedCustomers' : ''}';
+      String ticketMessage = 'Restored $restoredTickets tickets${skippedTickets > 0 ? ', skipped $skippedTickets' : ''}';
+
+      return '$customerMessage. $ticketMessage.';
     } catch (e) {
       return 'Restore error: $e';
     }
   }
 }
+''

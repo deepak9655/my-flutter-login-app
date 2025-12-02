@@ -1,5 +1,6 @@
 // lib/screens/login_screen.dart
 import 'package:flutter/material.dart';
+import 'package:font_awesome_flutter/font_awesome_flutter.dart';
 import 'package:provider/provider.dart';
 import '../services/auth_service.dart';
 import 'home_screen.dart';
@@ -150,9 +151,8 @@ class LoginScreen extends StatelessWidget {
     return Container(
       height: 56,
       decoration: BoxDecoration(
-        color: const Color(0xFF4285F4), // Google Blue
+        color: Colors.white, // Google's preferred button color
         borderRadius: BorderRadius.circular(12),
-        border: Border.all(color: Colors.white, width: 2),
         boxShadow: [
           BoxShadow(
             color: Colors.black.withAlpha(51),
@@ -179,11 +179,15 @@ class LoginScreen extends StatelessWidget {
                     height: 24,
                     child: CircularProgressIndicator(
                       strokeWidth: 2,
-                      valueColor: AlwaysStoppedAnimation<Color>(Colors.white),
+                      valueColor: AlwaysStoppedAnimation<Color>(Color(0xFF4285F4)), // Google Blue
                     ),
                   )
                 else
-                  _buildGoogleLogo(),
+                  const FaIcon(
+                    FontAwesomeIcons.google,
+                    color: Color(0xFF4285F4), // Google Blue
+                    size: 24,
+                  ),
                 const SizedBox(width: 12),
                 Text(
                   authService.isLoading
@@ -192,7 +196,7 @@ class LoginScreen extends StatelessWidget {
                   style: const TextStyle(
                     fontSize: 16,
                     fontWeight: FontWeight.w600,
-                    color: Colors.white,
+                    color: Colors.black54,
                   ),
                 ),
               ],
@@ -286,26 +290,5 @@ class LoginScreen extends StatelessWidget {
         MaterialPageRoute(builder: (_) => const HomeScreen()),
       );
     }
-  }
-
-  // Build simple Google logo - a colorful 'G'
-  Widget _buildGoogleLogo() {
-    return Container(
-      width: 24,
-      height: 24,
-      decoration: const BoxDecoration(
-        color: Colors.white,
-        shape: BoxShape.circle,
-      ),
-      alignment: Alignment.center,
-      child: const Text(
-        'G',
-        style: TextStyle(
-          fontSize: 20,
-          fontWeight: FontWeight.bold,
-          color: Color(0xFF4285F4), // Google Blue
-        ),
-      ),
-    );
   }
 }

@@ -14,6 +14,7 @@ import 'add_repair_screen.dart';
 import 'detail_screen.dart';
 import 'login_screen.dart';
 import 'settings_screen.dart';
+import 'customer_list_screen.dart'; // Import the new screen
 
 class HomeScreen extends StatefulWidget {
   const HomeScreen({super.key});
@@ -47,12 +48,12 @@ class _HomeScreenState extends State<HomeScreen> {
     // Filter by search query
     if (searchQuery.isNotEmpty) {
       filtered = filtered.where((ticket) {
-        final name = ticket.customerName?.toLowerCase() ?? '';
+        final customerName = ticket.customer.value?.name?.toLowerCase() ?? '';
         final model = ticket.deviceModel?.toLowerCase() ?? '';
         final type = ticket.deviceType?.toLowerCase() ?? '';
-        final phone = ticket.customerPhoneNumber?.toLowerCase() ?? '';
+        final phone = ticket.customer.value?.phoneNumber?.toLowerCase() ?? '';
         final query = searchQuery.toLowerCase();
-        return name.contains(query) ||
+        return customerName.contains(query) ||
             model.contains(query) ||
             type.contains(query) ||
             phone.contains(query);
@@ -74,9 +75,9 @@ class _HomeScreenState extends State<HomeScreen> {
       case RepairStatus.pending:
         return theme.colorScheme.error;
       case RepairStatus.inProgress:
-        return Colors.orange.shade600; // Good for both themes
+        return Colors.orange.shade600;
       case RepairStatus.completed:
-        return Colors.green.shade600; // Good for both themes
+        return Colors.green.shade600;
       default:
         return theme.colorScheme.onSurface;
     }
@@ -87,10 +88,10 @@ class _HomeScreenState extends State<HomeScreen> {
     return Container(
       padding: const EdgeInsets.symmetric(horizontal: 10, vertical: 4),
       decoration: BoxDecoration(
-        color: statusColor.withAlpha((255 * 0.15).round()), // 0.15 opacity
+        color: statusColor.withAlpha((255 * 0.15).round()),
         borderRadius: BorderRadius.circular(8),
         border: Border.all(
-          color: statusColor.withAlpha((255 * 0.5).round()), // 0.5 opacity
+          color: statusColor.withAlpha((255 * 0.5).round()),
         ),
       ),
       child: Text(
@@ -214,8 +215,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
   Future<void> _handleRestoreBackup(
       BuildContext context, HomeViewModel model) async {
-    // For now, show a dialog to enter backup file path
-    // In a full implementation, you'd use file_picker
     final controller = TextEditingController();
 
     showDialog(
@@ -266,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen> {
       ),
     );
   }
-
+  
   @override
   Widget build(BuildContext context) {
     return Consumer<HomeViewModel>(
@@ -300,96 +299,12 @@ class _HomeScreenState extends State<HomeScreen> {
                     tooltip: 'Sync & Backup',
                     onPressed: () => _handleSyncBackup(context, model),
                   ),
-                  // Settings Button
-                  IconButton(
-                    icon: const Icon(Icons.settings_rounded),
-                    tooltip: 'Settings',
-                    onPressed: () {
-                      Navigator.push(
-                        context,
-                        MaterialPageRoute(
-                            builder: (_) => const SettingsScreen()),
-                      );
-                    },
-                  ),
-                  // User Menu
-                  PopupMenuButton<String>(
-                    icon: authService.currentUser?.photoUrl != null
-                        ? CircleAvatar(
-                            radius: 16,
-                            backgroundImage: NetworkImage(
-                                authService.currentUser!.photoUrl!),
-                          )
-                        : const Icon(Icons.account_circle),
-                    onSelected: (value) async {
-                      if (value == 'signout') {
-                        await _handleSignOut(context, authService);
-                      } else if (value == 'profile') {
-                        _showUserProfile(context, authService);
-                      }
-                    },
-                    itemBuilder: (BuildContext context) => [
-                      if (authService.currentUser != null)
-                        PopupMenuItem(
-                          value: 'profile',
-                          child: Row(
-                            children: [
-                              const Icon(Icons.person, size: 20),
-                              const SizedBox(width: 8),
-                              Expanded(
-                                child: Column(
-                                  crossAxisAlignment: CrossAxisAlignment.start,
-                                  children: [
-                                    Text(
-                                      authService.displayName ?? 'User',
-                                      style: const TextStyle(
-                                        fontWeight: FontWeight.bold,
-                                      ),
-                                    ),
-                                    if (authService.email != null)
-                                      Text(
-                                        authService.email!,
-                                        style: TextStyle(
-                                          fontSize: 12,
-                                          color: Theme.of(context)
-                                                  .textTheme
-                                                  .bodySmall
-                                                  ?.color ??
-                                              Theme.of(context)
-                                                  .colorScheme
-                                                  .onSurface,
-                                        ),
-                                        overflow: TextOverflow.ellipsis,
-                                      ),
-                                  ],
-                                ),
-                              ),
-                            ],
-                          ),
-                        ),
-                      const PopupMenuDivider(),
-                      PopupMenuItem(
-                        value: 'signout',
-                        child: Row(
-                          children: [
-                            Icon(Icons.logout,
-                                size: 20,
-                                color: Theme.of(context).colorScheme.error),
-                            const SizedBox(width: 8),
-                            Text('Sign Out',
-                                style: TextStyle(
-                                    color:
-                                        Theme.of(context).colorScheme.error)),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
                 ],
               ),
+              drawer: _buildAppDrawer(context, authService),
               body: Column(
                 children: [
-                  // Stats Cards with Gradient
+                  // Stats Cards
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -401,13 +316,6 @@ class _HomeScreenState extends State<HomeScreen> {
                         begin: Alignment.topLeft,
                         end: Alignment.bottomRight,
                       ),
-                      boxShadow: [
-                        BoxShadow(
-                          color: Colors.black.withAlpha(26),
-                          blurRadius: 10,
-                          offset: const Offset(0, 2),
-                        ),
-                      ],
                     ),
                     child: IntrinsicHeight(
                       child: Row(
@@ -440,21 +348,8 @@ class _HomeScreenState extends State<HomeScreen> {
                   // Search and Filter Section
                   Container(
                     padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      gradient: LinearGradient(
-                        colors: [
-                          Theme.of(context).scaffoldBackgroundColor,
-                          Theme.of(context)
-                              .scaffoldBackgroundColor
-                              .withAlpha((255 * 0.95).round()),
-                        ],
-                        begin: Alignment.topLeft,
-                        end: Alignment.bottomRight,
-                      ),
-                    ),
                     child: Column(
                       children: [
-                        // Search Bar
                         TextField(
                           controller: _searchController,
                           decoration: InputDecoration(
@@ -481,7 +376,6 @@ class _HomeScreenState extends State<HomeScreen> {
                           onChanged: (_) => _onSearchChanged(),
                         ),
                         const SizedBox(height: 12),
-                        // Filter Chips
                         Row(
                           children: [
                             Expanded(
@@ -502,21 +396,6 @@ class _HomeScreenState extends State<HomeScreen> {
                                   ],
                                 ),
                               ),
-                            ),
-                            IconButton(
-                              icon: Icon(
-                                _showFilters
-                                    ? Icons.filter_alt_rounded
-                                    : Icons.filter_alt_outlined,
-                                color: _filterStatus != null
-                                    ? Theme.of(context).colorScheme.primary
-                                    : null,
-                              ),
-                              onPressed: () {
-                                setState(() {
-                                  _showFilters = !_showFilters;
-                                });
-                              },
                             ),
                           ],
                         ),
@@ -539,7 +418,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                       color: Theme.of(context)
                                           .colorScheme
                                           .onSurface
-                                          .withAlpha((255 * 0.4).round()),
+                                          .withAlpha(100),
                                     ),
                                     const SizedBox(height: 16),
                                     Text(
@@ -551,7 +430,7 @@ class _HomeScreenState extends State<HomeScreen> {
                                         color: Theme.of(context)
                                             .colorScheme
                                             .onSurface
-                                            .withAlpha((255 * 0.6).round()),
+                                            .withAlpha(150),
                                       ),
                                     ),
                                   ],
@@ -562,6 +441,8 @@ class _HomeScreenState extends State<HomeScreen> {
                                 itemCount: filteredTickets.length,
                                 itemBuilder: (context, index) {
                                   final ticket = filteredTickets[index];
+                                  // Load customer data for the ticket before building the card
+                                  ticket.customer.loadSync();
                                   return _buildModernTicketCard(
                                     context,
                                     ticket,
@@ -572,46 +453,86 @@ class _HomeScreenState extends State<HomeScreen> {
                   ),
                 ],
               ),
-              floatingActionButton: Container(
-                decoration: BoxDecoration(
-                  gradient: LinearGradient(
-                    colors: [
-                      Colors.amber,
-                      Colors.amber.shade700,
-                    ],
-                    begin: Alignment.topLeft,
-                    end: Alignment.bottomRight,
-                  ),
-                  borderRadius: BorderRadius.circular(16),
-                  boxShadow: [
-                    BoxShadow(
-                      color: Colors.amber.withAlpha((255 * 0.3).round()),
-                      blurRadius: 8,
-                      offset: const Offset(0, 4),
+              floatingActionButton: FloatingActionButton.extended(
+                onPressed: () async {
+                  await Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (context) => const AddRepairScreen(),
                     ),
-                  ],
-                ),
-                child: FloatingActionButton.extended(
-                  onPressed: () async {
-                    await Navigator.push(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const AddRepairScreen(),
-                      ),
-                    );
-                    model.refreshTickets();
-                  },
-                  icon: const Icon(Icons.add_rounded),
-                  label: const Text('New Job'),
-                  backgroundColor: Colors.transparent,
-                  foregroundColor: Colors.black,
-                  elevation: 0,
-                ),
+                  );
+                  model.refreshTickets();
+                },
+                icon: const Icon(Icons.add_rounded),
+                label: const Text('New Job'),
               ),
             );
           },
         );
       },
+    );
+  }
+
+  Drawer _buildAppDrawer(BuildContext context, AuthService authService) {
+    return Drawer(
+      child: Column(
+        children: [
+          UserAccountsDrawerHeader(
+            accountName: Text(authService.displayName ?? 'Guest'),
+            accountEmail: Text(authService.email ?? 'Not signed in'),
+            currentAccountPicture: CircleAvatar(
+              backgroundImage: authService.currentUser?.photoUrl != null
+                  ? NetworkImage(authService.currentUser!.photoUrl!)
+                  : null,
+              child: authService.currentUser?.photoUrl == null
+                  ? const Icon(Icons.person, size: 40)
+                  : null,
+            ),
+            decoration: BoxDecoration(
+              color: Theme.of(context).colorScheme.primary,
+            ),
+          ),
+          ListTile(
+            leading: const Icon(Icons.dashboard_rounded),
+            title: const Text('Dashboard'),
+            onTap: () {
+              Navigator.pop(context);
+            },
+          ),
+          ListTile(
+            leading: const Icon(Icons.people_alt_rounded),
+            title: const Text('Customers'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => const CustomerListScreen(),
+                ),
+              );
+            },
+          ),
+          const Divider(),
+          ListTile(
+            leading: const Icon(Icons.settings_rounded),
+            title: const Text('Settings'),
+            onTap: () {
+              Navigator.pop(context);
+              Navigator.push(
+                context,
+                MaterialPageRoute(builder: (_) => const SettingsScreen()),
+              );
+            },
+          ),
+          Expanded(child: Container()),
+          ListTile(
+            leading: Icon(Icons.logout, color: Theme.of(context).colorScheme.error),
+            title: Text('Sign Out', style: TextStyle(color: Theme.of(context).colorScheme.error)),
+            onTap: () => _handleSignOut(context, authService),
+          ),
+          const SizedBox(height: 16),
+        ],
+      ),
     );
   }
 
@@ -731,20 +652,17 @@ class _HomeScreenState extends State<HomeScreen> {
           padding: const EdgeInsets.all(16),
           child: Row(
             children: [
-              // Image
               _buildTicketImage(ticket.photoPath),
               const SizedBox(width: 16),
-              // Content
               Expanded(
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
                     Text(
-                      ticket.customerName ?? 'Unknown Customer',
+                      ticket.customer.value?.name ?? 'Unknown Customer',
                       style: TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
-                        color: Theme.of(context).textTheme.titleLarge?.color,
                       ),
                       maxLines: 1,
                       overflow: TextOverflow.ellipsis,
@@ -753,15 +671,7 @@ class _HomeScreenState extends State<HomeScreen> {
                     Text(
                       '${ticket.deviceType ?? 'Device'} • ${ticket.deviceModel ?? 'N/A'}',
                       style: TextStyle(
-                        color: Theme.of(context)
-                                .textTheme
-                                .bodyMedium
-                                ?.color
-                                ?.withAlpha((255 * 0.7).round()) ??
-                            Theme.of(context)
-                                .colorScheme
-                                .onSurface
-                                .withAlpha((255 * 0.7).round()),
+                        color: Theme.of(context).textTheme.bodyMedium?.color?.withAlpha(180),
                         fontSize: 14,
                       ),
                       maxLines: 1,
@@ -781,7 +691,6 @@ class _HomeScreenState extends State<HomeScreen> {
                   ],
                 ),
               ),
-              // Status Badge
               _buildStatusBadge(context, ticket),
             ],
           ),
@@ -805,56 +714,6 @@ class _HomeScreenState extends State<HomeScreen> {
       );
     }
     return _buildPlaceholderImage(context);
-  }
-
-  void _showUserProfile(BuildContext context, AuthService authService) {
-    showDialog(
-      context: context,
-      builder: (context) => AlertDialog(
-        title: const Text('User Profile'),
-        content: Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            if (authService.currentUser?.photoUrl != null)
-              CircleAvatar(
-                radius: 40,
-                backgroundImage:
-                    NetworkImage(authService.currentUser!.photoUrl!),
-              )
-            else
-              const CircleAvatar(
-                radius: 40,
-                child: Icon(Icons.person, size: 40),
-              ),
-            const SizedBox(height: 16),
-            Text(
-              authService.displayName ?? 'User',
-              style: const TextStyle(
-                fontSize: 20,
-                fontWeight: FontWeight.bold,
-              ),
-            ),
-            if (authService.email != null) ...[
-              const SizedBox(height: 8),
-              Text(
-                authService.email!,
-                style: TextStyle(
-                  fontSize: 14,
-                  color: Theme.of(context).textTheme.bodySmall?.color ??
-                      Theme.of(context).colorScheme.onSurface,
-                ),
-              ),
-            ],
-          ],
-        ),
-        actions: [
-          TextButton(
-            onPressed: () => Navigator.of(context).pop(),
-            child: const Text('Close'),
-          ),
-        ],
-      ),
-    );
   }
 
   Future<void> _handleSignOut(
@@ -909,17 +768,6 @@ class _HomeScreenState extends State<HomeScreen> {
       context: context,
       firstDate: DateTime(2000),
       lastDate: DateTime.now(),
-      builder: (BuildContext context, Widget? child) {
-        return Theme(
-          data: ThemeData.light().copyWith(
-            colorScheme: ColorScheme.light(
-                primary: Theme.of(context).colorScheme.primary),
-            buttonTheme:
-                const ButtonThemeData(textTheme: ButtonTextTheme.primary),
-          ),
-          child: child!,
-        );
-      },
     );
 
     if (picked != null && context.mounted) {
@@ -951,7 +799,6 @@ class _HomeScreenState extends State<HomeScreen> {
       final excel = excel_pkg.Excel.createExcel();
       final sheet = excel['Revenue Report'];
 
-      // Add headers
       sheet.appendRow([
         'Date',
         'Customer Name',
@@ -970,9 +817,10 @@ class _HomeScreenState extends State<HomeScreen> {
         final amount = ticket.totalPrice ?? 0.0;
         totalRevenue += amount;
 
+        ticket.customer.loadSync(); // Load customer data
         sheet.appendRow([
           date,
-          ticket.customerName ?? 'N/A',
+          ticket.customer.value?.name ?? 'N/A',
           ticket.deviceType ?? 'N/A',
           ticket.deviceModel ?? 'N/A',
           ticket.issueDescription ?? 'N/A',
@@ -981,8 +829,7 @@ class _HomeScreenState extends State<HomeScreen> {
         ]);
       }
 
-      // Add total revenue
-      sheet.appendRow([]); // Empty row for spacing
+      sheet.appendRow([]);
       sheet.appendRow(['', '', '', '', 'Total Revenue:', totalRevenue]);
 
       final directory = await getTemporaryDirectory();
@@ -994,14 +841,6 @@ class _HomeScreenState extends State<HomeScreen> {
 
       if (context.mounted) {
         await Share.shareXFiles([XFile(filePath)], text: 'Revenue Report');
-        if (context.mounted) {
-          ScaffoldMessenger.of(context).showSnackBar(
-            const SnackBar(
-              content: Text('Revenue report exported successfully!'),
-              backgroundColor: Colors.green,
-            ),
-          );
-        }
       }
     } catch (e) {
       if (context.mounted) {

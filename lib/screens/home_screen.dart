@@ -24,7 +24,7 @@ class HomeScreen extends StatefulWidget {
 }
 
 class _HomeScreenState extends State<HomeScreen> {
-  bool _showFilters = false;
+  final bool _showFilters = false;
   RepairStatus? _filterStatus;
   final TextEditingController _searchController = TextEditingController();
 
@@ -660,7 +660,7 @@ class _HomeScreenState extends State<HomeScreen> {
                   children: [
                     Text(
                       ticket.customer.value?.name ?? 'Unknown Customer',
-                      style: TextStyle(
+                      style: const TextStyle(
                         fontWeight: FontWeight.bold,
                         fontSize: 16,
                       ),

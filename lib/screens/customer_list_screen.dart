@@ -9,10 +9,10 @@ class CustomerListScreen extends StatefulWidget {
   const CustomerListScreen({super.key});
 
   @override
-  _CustomerListScreenState createState() => _CustomerListScreenState();
+  CustomerListScreenState createState() => CustomerListScreenState();
 }
 
-class _CustomerListScreenState extends State<CustomerListScreen> {
+class CustomerListScreenState extends State<CustomerListScreen> {
   late Future<List<Customer>> _customersFuture;
 
   @override
@@ -31,6 +31,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => screen),
     );
+    if (!mounted) return; // Add this line
     _loadCustomers(); // Reload when returning
   }
 
@@ -55,7 +56,7 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             return const Center(child: CircularProgressIndicator());
           }
           if (snapshot.hasError) {
-            return Center(child: Text('Error: ${snapshot.error}'));
+            return Center(child: Text('Error: ${snapshot.error;}'));
           }
           if (!snapshot.hasData || snapshot.data!.isEmpty) {
             return const Center(
@@ -73,11 +74,14 @@ class _CustomerListScreenState extends State<CustomerListScreen> {
             itemCount: customers.length,
             itemBuilder: (context, index) {
               final customer = customers[index];
+              final customerInitial = customer.name != null && customer.name!.isNotEmpty
+                  ? customer.name![0].toUpperCase()
+                  : 'N';
               return Card(
                 margin: const EdgeInsets.symmetric(horizontal: 8, vertical: 4),
                 child: ListTile(
                   leading: CircleAvatar(
-                    child: Text(customer.name?.substring(0, 1) ?? 'N'),
+                    child: Text(customerInitial),
                   ),
                   title: Text(customer.name ?? 'No Name'),
                   subtitle: Text(customer.phoneNumber ?? 'No Phone'),

@@ -3,7 +3,7 @@ import 'package:provider/provider.dart';
 import '../models/customer.dart';
 import '../services/database_service.dart';
 import 'add_edit_customer_screen.dart';
-import 'ticket_detail_screen.dart'; // Assuming you have this
+import 'detail_screen.dart'; // Assuming you have this
 
 class CustomerDetailScreen extends StatefulWidget {
   final int customerId;
@@ -11,10 +11,10 @@ class CustomerDetailScreen extends StatefulWidget {
   const CustomerDetailScreen({super.key, required this.customerId});
 
   @override
-  _CustomerDetailScreenState createState() => _CustomerDetailScreenState();
+  CustomerDetailScreenState createState() => CustomerDetailScreenState();
 }
 
-class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
+class CustomerDetailScreenState extends State<CustomerDetailScreen> {
   late Future<Customer?> _customerFuture;
 
   @override
@@ -25,14 +25,20 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
 
   void _loadCustomer() {
     setState(() {
-      _customerFuture = context.read<DatabaseService>().isar.customers.get(widget.customerId);
+      _customerFuture = _getCustomer();
     });
+  }
+
+  Future<Customer?> _getCustomer() async {
+    final dbService = context.read<DatabaseService>();
+    return await dbService.isar.customers.get(widget.customerId);
   }
 
   void _navigateAndReload(Widget screen) async {
     await Navigator.of(context).push(
       MaterialPageRoute(builder: (_) => screen),
     );
+    if (!mounted) return; // Check if the widget is still mounted
     _loadCustomer(); // Reload when returning
   }
 
@@ -55,7 +61,6 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
 
         final customer = snapshot.data!;
         // Load repair tickets associated with the customer
-        customer.repairTickets.loadSync();
 
         return Scaffold(
           appBar: AppBar(
@@ -93,27 +98,37 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
                 ),
                 const SizedBox(height: 8),
                 Expanded(
-                  child: customer.repairTickets.isEmpty
-                      ? const Text('No repair history.')
-                      : ListView.builder(
-                          itemCount: customer.repairTickets.length,
-                          itemBuilder: (context, index) {
-                            final ticket = customer.repairTickets.elementAt(index);
-                            return Card(
-                              child: ListTile(
-                                title: Text(ticket.deviceModel ?? 'Unknown Device'),
-                                subtitle: Text(ticket.issueDescription ?? 'No issue description'),
-                                onTap: () {
-                                  Navigator.of(context).push(
-                                    MaterialPageRoute(
-                                      builder: (_) => TicketDetailScreen(ticket: ticket), // Navigate to ticket details
-                                    ),
-                                  );
-                                },
-                              ),
-                            );
-                          },
-                        ),
+                  child: FutureBuilder<List<dynamic>>(
+                    future: _getRepairTickets(customer),
+                    builder: (context, snapshot) {
+                      if (!snapshot.hasData) {
+                        return const Center(child: CircularProgressIndicator());
+                      }
+                      final tickets = snapshot.data!;
+                      if (tickets.isEmpty) {
+                        return const Text('No repair history.');
+                      }
+                      return ListView.builder(
+                        itemCount: tickets.length,
+                        itemBuilder: (context, index) {
+                          final ticket = tickets[index];
+                          return Card(
+                            child: ListTile(
+                              title: Text(ticket.deviceType ?? 'Unknown Device'),
+                              subtitle: Text(ticket.issueDescription ?? 'No issue description'),
+                              onTap: () {
+                                Navigator.of(context).push(
+                                  MaterialPageRoute(
+                                    builder: (_) => DetailScreen(ticket: ticket), // Navigate to ticket details
+                                  ),
+                                );
+                              },
+                            ),
+                          );
+                        },
+                      );
+                    },
+                  ),
                 ),
               ],
             ),
@@ -121,6 +136,11 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
         );
       },
     );
+  }
+
+  Future<List> _getRepairTickets(Customer customer) async {
+    final dbService = context.read<DatabaseService>();
+    return await dbService.isar.repairTickets.filter().customer((q) => q.idEqualTo(customer.id)).findAll();
   }
 
   void _confirmDelete(BuildContext context, Customer customer) {
@@ -138,7 +158,9 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
             child: const Text('Delete'),
             onPressed: () async {
               await context.read<DatabaseService>().deleteCustomer(customer.id);
+              if (!mounted) return; // Check if the widget is still mounted
               Navigator.of(ctx).pop();
+              if (!mounted) return; // Check if the widget is still mounted
               Navigator.of(context).pop(); // Go back to customer list
             },
           ),
@@ -147,3 +169,4 @@ class _CustomerDetailScreenState extends State<CustomerDetailScreen> {
     );
   }
 }
+'''

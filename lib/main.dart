@@ -12,7 +12,6 @@ import 'viewmodels/home_viewmodel.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
-  await DatabaseService().initialize();
   runApp(const MyApp());
 }
 
@@ -31,6 +30,7 @@ class MyApp extends StatelessWidget {
         ChangeNotifierProvider(create: (_) => AuthService()),
         ChangeNotifierProvider(create: (_) => SettingsService()),
         ChangeNotifierProvider(create: (_) => HomeViewModel()),
+        ChangeNotifierProvider(create: (_) => DatabaseService()),
       ],
       child: Consumer<SettingsService>(
         builder: (context, settings, child) {

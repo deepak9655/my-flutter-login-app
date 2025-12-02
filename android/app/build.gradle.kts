@@ -6,6 +6,7 @@ plugins {
 }
 
 android {
+    // Isar Flutter libs are included automatically
     namespace = "com.example.repair_shop_native"
     compileSdk = flutter.compileSdkVersion
     ndkVersion = flutter.ndkVersion

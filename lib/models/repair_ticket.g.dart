@@ -17,44 +17,54 @@ const RepairTicketSchema = CollectionSchema(
   name: r'RepairTicket',
   id: 4222738992326027195,
   properties: {
-    r'deviceModel': PropertySchema(
+    r'customerName': PropertySchema(
       id: 0,
+      name: r'customerName',
+      type: IsarType.string,
+    ),
+    r'customerPhoneNumber': PropertySchema(
+      id: 1,
+      name: r'customerPhoneNumber',
+      type: IsarType.string,
+    ),
+    r'deviceModel': PropertySchema(
+      id: 2,
       name: r'deviceModel',
       type: IsarType.string,
     ),
     r'deviceType': PropertySchema(
-      id: 1,
+      id: 3,
       name: r'deviceType',
       type: IsarType.string,
     ),
     r'entryDate': PropertySchema(
-      id: 2,
+      id: 4,
       name: r'entryDate',
       type: IsarType.dateTime,
     ),
     r'isPaid': PropertySchema(
-      id: 3,
+      id: 5,
       name: r'isPaid',
       type: IsarType.bool,
     ),
     r'issueDescription': PropertySchema(
-      id: 4,
+      id: 6,
       name: r'issueDescription',
       type: IsarType.string,
     ),
     r'photoPath': PropertySchema(
-      id: 5,
+      id: 7,
       name: r'photoPath',
       type: IsarType.string,
     ),
     r'status': PropertySchema(
-      id: 6,
+      id: 8,
       name: r'status',
       type: IsarType.string,
       enumMap: _RepairTicketstatusEnumValueMap,
     ),
     r'totalPrice': PropertySchema(
-      id: 7,
+      id: 9,
       name: r'totalPrice',
       type: IsarType.double,
     )
@@ -86,6 +96,18 @@ int _repairTicketEstimateSize(
   Map<Type, List<int>> allOffsets,
 ) {
   var bytesCount = offsets.last;
+  {
+    final value = object.customerName;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
+  {
+    final value = object.customerPhoneNumber;
+    if (value != null) {
+      bytesCount += 3 + value.length * 3;
+    }
+  }
   {
     final value = object.deviceModel;
     if (value != null) {
@@ -120,14 +142,16 @@ void _repairTicketSerialize(
   List<int> offsets,
   Map<Type, List<int>> allOffsets,
 ) {
-  writer.writeString(offsets[0], object.deviceModel);
-  writer.writeString(offsets[1], object.deviceType);
-  writer.writeDateTime(offsets[2], object.entryDate);
-  writer.writeBool(offsets[3], object.isPaid);
-  writer.writeString(offsets[4], object.issueDescription);
-  writer.writeString(offsets[5], object.photoPath);
-  writer.writeString(offsets[6], object.status.name);
-  writer.writeDouble(offsets[7], object.totalPrice);
+  writer.writeString(offsets[0], object.customerName);
+  writer.writeString(offsets[1], object.customerPhoneNumber);
+  writer.writeString(offsets[2], object.deviceModel);
+  writer.writeString(offsets[3], object.deviceType);
+  writer.writeDateTime(offsets[4], object.entryDate);
+  writer.writeBool(offsets[5], object.isPaid);
+  writer.writeString(offsets[6], object.issueDescription);
+  writer.writeString(offsets[7], object.photoPath);
+  writer.writeString(offsets[8], object.status.name);
+  writer.writeDouble(offsets[9], object.totalPrice);
 }
 
 RepairTicket _repairTicketDeserialize(
@@ -137,17 +161,19 @@ RepairTicket _repairTicketDeserialize(
   Map<Type, List<int>> allOffsets,
 ) {
   final object = RepairTicket(
-    deviceModel: reader.readStringOrNull(offsets[0]),
-    deviceType: reader.readStringOrNull(offsets[1]),
-    entryDate: reader.readDateTimeOrNull(offsets[2]),
-    isPaid: reader.readBoolOrNull(offsets[3]) ?? false,
-    issueDescription: reader.readStringOrNull(offsets[4]),
-    photoPath: reader.readStringOrNull(offsets[5]),
+    deviceModel: reader.readStringOrNull(offsets[2]),
+    deviceType: reader.readStringOrNull(offsets[3]),
+    entryDate: reader.readDateTimeOrNull(offsets[4]),
+    isPaid: reader.readBoolOrNull(offsets[5]) ?? false,
+    issueDescription: reader.readStringOrNull(offsets[6]),
+    photoPath: reader.readStringOrNull(offsets[7]),
     status:
-        _RepairTicketstatusValueEnumMap[reader.readStringOrNull(offsets[6])] ??
+        _RepairTicketstatusValueEnumMap[reader.readStringOrNull(offsets[8])] ??
             RepairStatus.pending,
-    totalPrice: reader.readDoubleOrNull(offsets[7]),
+    totalPrice: reader.readDoubleOrNull(offsets[9]),
   );
+  object.customerName = reader.readStringOrNull(offsets[0]);
+  object.customerPhoneNumber = reader.readStringOrNull(offsets[1]);
   object.id = id;
   return object;
 }
@@ -164,18 +190,22 @@ P _repairTicketDeserializeProp<P>(
     case 1:
       return (reader.readStringOrNull(offset)) as P;
     case 2:
-      return (reader.readDateTimeOrNull(offset)) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 3:
-      return (reader.readBoolOrNull(offset) ?? false) as P;
+      return (reader.readStringOrNull(offset)) as P;
     case 4:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readDateTimeOrNull(offset)) as P;
     case 5:
-      return (reader.readStringOrNull(offset)) as P;
+      return (reader.readBoolOrNull(offset) ?? false) as P;
     case 6:
+      return (reader.readStringOrNull(offset)) as P;
+    case 7:
+      return (reader.readStringOrNull(offset)) as P;
+    case 8:
       return (_RepairTicketstatusValueEnumMap[
               reader.readStringOrNull(offset)] ??
           RepairStatus.pending) as P;
-    case 7:
+    case 9:
       return (reader.readDoubleOrNull(offset)) as P;
     default:
       throw IsarError('Unknown property with id $propertyId');
@@ -288,6 +318,314 @@ extension RepairTicketQueryWhere
 
 extension RepairTicketQueryFilter
     on QueryBuilder<RepairTicket, RepairTicket, QFilterCondition> {
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerNameIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'customerName',
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerNameIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'customerName',
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerNameEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'customerName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerNameGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'customerName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerNameLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'customerName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerNameBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'customerName',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerNameStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'customerName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerNameEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'customerName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerNameContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'customerName',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerNameMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'customerName',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerNameIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'customerName',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerNameIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'customerName',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerPhoneNumberIsNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNull(
+        property: r'customerPhoneNumber',
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerPhoneNumberIsNotNull() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(const FilterCondition.isNotNull(
+        property: r'customerPhoneNumber',
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerPhoneNumberEqualTo(
+    String? value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'customerPhoneNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerPhoneNumberGreaterThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        include: include,
+        property: r'customerPhoneNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerPhoneNumberLessThan(
+    String? value, {
+    bool include = false,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.lessThan(
+        include: include,
+        property: r'customerPhoneNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerPhoneNumberBetween(
+    String? lower,
+    String? upper, {
+    bool includeLower = true,
+    bool includeUpper = true,
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.between(
+        property: r'customerPhoneNumber',
+        lower: lower,
+        includeLower: includeLower,
+        upper: upper,
+        includeUpper: includeUpper,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerPhoneNumberStartsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.startsWith(
+        property: r'customerPhoneNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerPhoneNumberEndsWith(
+    String value, {
+    bool caseSensitive = true,
+  }) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.endsWith(
+        property: r'customerPhoneNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerPhoneNumberContains(String value, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.contains(
+        property: r'customerPhoneNumber',
+        value: value,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerPhoneNumberMatches(String pattern, {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.matches(
+        property: r'customerPhoneNumber',
+        wildcard: pattern,
+        caseSensitive: caseSensitive,
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerPhoneNumberIsEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.equalTo(
+        property: r'customerPhoneNumber',
+        value: '',
+      ));
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
+      customerPhoneNumberIsNotEmpty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addFilterCondition(FilterCondition.greaterThan(
+        property: r'customerPhoneNumber',
+        value: '',
+      ));
+    });
+  }
+
   QueryBuilder<RepairTicket, RepairTicket, QAfterFilterCondition>
       deviceModelIsNull() {
     return QueryBuilder.apply(this, (query) {
@@ -1283,6 +1621,33 @@ extension RepairTicketQueryLinks
 
 extension RepairTicketQuerySortBy
     on QueryBuilder<RepairTicket, RepairTicket, QSortBy> {
+  QueryBuilder<RepairTicket, RepairTicket, QAfterSortBy> sortByCustomerName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterSortBy>
+      sortByCustomerNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerName', Sort.desc);
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterSortBy>
+      sortByCustomerPhoneNumber() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerPhoneNumber', Sort.asc);
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterSortBy>
+      sortByCustomerPhoneNumberDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerPhoneNumber', Sort.desc);
+    });
+  }
+
   QueryBuilder<RepairTicket, RepairTicket, QAfterSortBy> sortByDeviceModel() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'deviceModel', Sort.asc);
@@ -1387,6 +1752,33 @@ extension RepairTicketQuerySortBy
 
 extension RepairTicketQuerySortThenBy
     on QueryBuilder<RepairTicket, RepairTicket, QSortThenBy> {
+  QueryBuilder<RepairTicket, RepairTicket, QAfterSortBy> thenByCustomerName() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerName', Sort.asc);
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterSortBy>
+      thenByCustomerNameDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerName', Sort.desc);
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterSortBy>
+      thenByCustomerPhoneNumber() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerPhoneNumber', Sort.asc);
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QAfterSortBy>
+      thenByCustomerPhoneNumberDesc() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addSortBy(r'customerPhoneNumber', Sort.desc);
+    });
+  }
+
   QueryBuilder<RepairTicket, RepairTicket, QAfterSortBy> thenByDeviceModel() {
     return QueryBuilder.apply(this, (query) {
       return query.addSortBy(r'deviceModel', Sort.asc);
@@ -1503,6 +1895,21 @@ extension RepairTicketQuerySortThenBy
 
 extension RepairTicketQueryWhereDistinct
     on QueryBuilder<RepairTicket, RepairTicket, QDistinct> {
+  QueryBuilder<RepairTicket, RepairTicket, QDistinct> distinctByCustomerName(
+      {bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'customerName', caseSensitive: caseSensitive);
+    });
+  }
+
+  QueryBuilder<RepairTicket, RepairTicket, QDistinct>
+      distinctByCustomerPhoneNumber({bool caseSensitive = true}) {
+    return QueryBuilder.apply(this, (query) {
+      return query.addDistinctBy(r'customerPhoneNumber',
+          caseSensitive: caseSensitive);
+    });
+  }
+
   QueryBuilder<RepairTicket, RepairTicket, QDistinct> distinctByDeviceModel(
       {bool caseSensitive = true}) {
     return QueryBuilder.apply(this, (query) {
@@ -1563,6 +1970,19 @@ extension RepairTicketQueryProperty
   QueryBuilder<RepairTicket, int, QQueryOperations> idProperty() {
     return QueryBuilder.apply(this, (query) {
       return query.addPropertyName(r'id');
+    });
+  }
+
+  QueryBuilder<RepairTicket, String?, QQueryOperations> customerNameProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'customerName');
+    });
+  }
+
+  QueryBuilder<RepairTicket, String?, QQueryOperations>
+      customerPhoneNumberProperty() {
+    return QueryBuilder.apply(this, (query) {
+      return query.addPropertyName(r'customerPhoneNumber');
     });
   }
 

@@ -78,8 +78,8 @@ class HomeViewModel extends ChangeNotifier {
       final ticket = _tickets[i];
       List<dynamic> row = [
         ticket.id,
-        ticket.customerName ?? '',
-        ticket.customerPhoneNumber ?? '', // Included from previous logic
+        ticket.customer.value?.name ?? '',
+        ticket.customer.value?.phoneNumber ?? '', // Included from previous logic
         ticket.deviceType ?? '', // NEW FIELD ADDED
         ticket.deviceModel ?? '',
         ticket.issueDescription ?? '',

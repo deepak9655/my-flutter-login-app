@@ -3,7 +3,9 @@ import 'dart:io';
 import 'package:flutter/material.dart';
 import 'package:provider/provider.dart';
 import 'package:image_picker/image_picker.dart';
+import '../models/customer.dart';
 import '../viewmodels/add_repair_viewmodel.dart';
+import '../screens/add_edit_customer_screen.dart';
 
 class AddRepairScreen extends StatefulWidget {
   const AddRepairScreen({super.key});
@@ -21,6 +23,8 @@ class _AddRepairScreenState extends State<AddRepairScreen> {
   final _issueController = TextEditingController();
   final _amountController = TextEditingController();
   final ImagePicker _picker = ImagePicker();
+
+  Customer? _selectedCustomer;
 
   @override
   void dispose() {
@@ -115,42 +119,30 @@ class _AddRepairScreenState extends State<AddRepairScreen> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.stretch,
                   children: <Widget>[
-                    // Photo Section
                     _buildPhotoSection(context, model, () => _showImageSourceDialog(model)),
                     const SizedBox(height: 24),
-
-                    // Customer Name
+                    _buildCustomerDropdown(context, model),
+                    const SizedBox(height: 16),
                     _buildTextField(
                       _nameController,
                       'Customer Name',
                       Icons.person,
-                      validator: (value) {
-                        if (value == null || value.isEmpty) {
-                          return 'Please enter customer name';
-                        }
-                        return null;
-                      },
+                      enabled: false,
                     ),
                     const SizedBox(height: 16),
-
-                    // Phone Number
                     _buildTextField(
                       _phoneController,
                       'Phone Number',
                       Icons.phone,
-                      keyboardType: TextInputType.phone,
+                      enabled: false,
                     ),
                     const SizedBox(height: 16),
-
-                    // Device Type
                     _buildTextField(
                       _deviceTypeController,
                       'Device Type (e.g., Mobile, Laptop)',
                       Icons.devices,
                     ),
                     const SizedBox(height: 16),
-
-                    // Device Model
                     _buildTextField(
                       _deviceModelController,
                       'Device Model',
@@ -163,8 +155,6 @@ class _AddRepairScreenState extends State<AddRepairScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-
-                    // Issue Description
                     _buildTextField(
                       _issueController,
                       'Issue Description',
@@ -178,8 +168,6 @@ class _AddRepairScreenState extends State<AddRepairScreen> {
                       },
                     ),
                     const SizedBox(height: 16),
-
-                    // Amount
                     _buildTextField(
                       _amountController,
                       'Repair Amount (₹)',
@@ -187,8 +175,6 @@ class _AddRepairScreenState extends State<AddRepairScreen> {
                       keyboardType: TextInputType.number,
                     ),
                     const SizedBox(height: 32),
-
-                    // Save Button
                     model.isLoading
                         ? const Center(child: CircularProgressIndicator())
                         : ElevatedButton.icon(
@@ -217,6 +203,62 @@ class _AddRepairScreenState extends State<AddRepairScreen> {
       ),
     );
   }
+
+  Widget _buildCustomerDropdown(BuildContext context, AddRepairViewModel model) {
+  return Row(
+    children: [
+      Expanded(
+        child: DropdownButtonFormField<Customer>(
+          value: _selectedCustomer,
+          hint: const Text('Select Customer'),
+          isExpanded: true,
+          decoration: InputDecoration(
+            labelText: 'Customer',
+            prefixIcon: const Icon(Icons.person_search),
+            border: OutlineInputBorder(borderRadius: BorderRadius.circular(12)),
+          ),
+          items: model.customers.map<DropdownMenuItem<Customer>>((Customer customer) {
+            return DropdownMenuItem<Customer>(
+              value: customer,
+              child: Text(customer.name ?? 'Unnamed Customer'),
+            );
+          }).toList(),
+          onChanged: (Customer? newValue) {
+            setState(() {
+              _selectedCustomer = newValue;
+              if (newValue != null) {
+                _nameController.text = newValue.name ?? '';
+                _phoneController.text = newValue.phoneNumber ?? '';
+              } else {
+                _nameController.clear();
+                _phoneController.clear();
+              }
+            });
+          },
+          validator: (value) => value == null ? 'Please select a customer' : null,
+        ),
+      ),
+      IconButton(
+        icon: Icon(Icons.person_add, color: Theme.of(context).colorScheme.primary),
+        onPressed: () async {
+          final newCustomer = await Navigator.of(context).push(
+            MaterialPageRoute(builder: (context) =>AddEditCustomerScreen()),
+          );
+          if (newCustomer != null && newCustomer is Customer) {
+            await model.fetchCustomers();
+            setState(() {
+              _selectedCustomer = model.customers.firstWhere((c) => c.id == newCustomer.id, orElse: () => newCustomer);
+              _nameController.text = _selectedCustomer?.name ?? '';
+              _phoneController.text = _selectedCustomer?.phoneNumber ?? '';
+            });
+          }
+        },
+        tooltip: 'Add New Customer',
+      ),
+    ],
+  );
+}
+
 
   Widget _buildPhotoSection(BuildContext context, AddRepairViewModel model, VoidCallback onTap) {
     final theme = Theme.of(context);
@@ -253,7 +295,6 @@ class _AddRepairScreenState extends State<AddRepairScreen> {
                     ),
                   ),
                 ),
-                // Overlay to allow tapping to change photo
                 Positioned.fill(
                   child: Material(
                     color: Colors.transparent,
@@ -316,9 +357,11 @@ class _AddRepairScreenState extends State<AddRepairScreen> {
     int maxLines = 1,
     TextInputType? keyboardType,
     String? Function(String?)? validator,
+    bool enabled = true,
   }) {
     return TextFormField(
       controller: controller,
+      enabled: enabled,
       decoration: InputDecoration(
         labelText: label,
         prefixIcon: Icon(icon, color: Theme.of(context).colorScheme.primary),
@@ -336,16 +379,22 @@ class _AddRepairScreenState extends State<AddRepairScreen> {
 
   void _saveForm(BuildContext context, AddRepairViewModel model) {
     if (_formKey.currentState!.validate()) {
+      if (_selectedCustomer == null) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(
+            content: Text('Please select or create a customer.'),
+            backgroundColor: Colors.red,
+          ),
+        );
+        return;
+      }
+
       final amount = _amountController.text.isNotEmpty
           ? double.tryParse(_amountController.text)
           : null;
 
-      model
-          .saveNewRepair(
-        customerName: _nameController.text.trim(),
-        customerPhone: _phoneController.text.trim().isNotEmpty
-            ? _phoneController.text.trim()
-            : null,
+      model.saveNewRepair(
+        customer: _selectedCustomer!,
         deviceType: _deviceTypeController.text.trim().isNotEmpty
             ? _deviceTypeController.text.trim()
             : null,

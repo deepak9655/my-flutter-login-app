@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:isar/isar.dart';
 import 'package:provider/provider.dart';
 import 'package:repair_shop_native/models/repair_ticket.dart';
 import '../models/customer.dart';
@@ -141,7 +142,7 @@ class CustomerDetailScreenState extends State<CustomerDetailScreen> {
 
   Future<List> _getRepairTickets(Customer customer) async {
     final dbService = context.read<DatabaseService>();
-    return await dbService.isar.repairTickets.filter().customer((q) => q.idEqualTo(customer.id)).findAll();
+    return await dbService.isar.repairTickets.filter().customer((q) => q.idEqualTo(customer.id)).findAllSync();
   }
 
   void _confirmDelete(BuildContext context, Customer customer) {
@@ -170,4 +171,3 @@ class CustomerDetailScreenState extends State<CustomerDetailScreen> {
     );
   }
 }
-'''

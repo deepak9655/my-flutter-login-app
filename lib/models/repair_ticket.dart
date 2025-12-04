@@ -13,6 +13,8 @@ class RepairTicket {
 
   final customer = IsarLink<Customer>();
 
+ String? customerName;
+  String? customerPhoneNumber;
   String? deviceType;
   String? deviceModel;
   String? issueDescription;

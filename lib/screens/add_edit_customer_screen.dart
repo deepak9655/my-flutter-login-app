@@ -15,18 +15,16 @@ class AddEditCustomerScreen extends StatefulWidget {
 
 class AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
   final _formKey = GlobalKey<FormState>();
-  
-  // Changed to nullable String? to match the Customer model fields (name, phoneNumber, email)
-  late String? _name;
-  late String? _phone;
-  late String? _email;
+
+  // Nullable variables to match the Customer model
+  String? _name;
+  String? _phone;
+  String? _email;
 
   @override
   void initState() {
     super.initState();
-    // Use the null-aware coalescing operator (?? '') to handle nulls safely.
-    // If widget.customer is null, then widget.customer?.name is null, which becomes ''.
-    // If widget.customer is not null, but widget.customer.name is null, it also becomes ''.
+    // Initialize the fields from the passed customer object or use empty strings
     _name = widget.customer?.name ?? '';
     _phone = widget.customer?.phoneNumber ?? '';
     _email = widget.customer?.email ?? '';
@@ -37,18 +35,19 @@ class AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
       _formKey.currentState!.save();
 
       final db = context.read<DatabaseService>();
-      
-      // Ensure the new customer object is created with nullable fields from state
+
+      // Create the customer object with nullable fields
       final newCustomer = Customer()
-        // Keep existing ID if editing, otherwise use Isar auto-increment
-        ..id = widget.customer?.id ?? Isar.autoIncrement 
-        ..name = _name // _name is now String?
-        ..phoneNumber = _phone // _phone is now String?
-        ..email = _email; // _email is now String?
+        ..id = widget.customer?.id ?? Isar.autoIncrement
+        ..name = _name
+        ..phoneNumber = _phone
+        ..email = _email;
 
       if (widget.customer == null) {
+        // Add new customer
         await db.addCustomer(newCustomer);
       } else {
+        // Update existing customer
         await db.updateCustomer(newCustomer);
       }
 
@@ -68,9 +67,9 @@ class AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
           key: _formKey,
           child: Column(
             children: [
+              // Name field with validation
               TextFormField(
-                // Use the null check operator (!) since _name is initialized in initState
-                initialValue: _name!, 
+                initialValue: _name ?? '', // Ensure initial value is set
                 decoration: const InputDecoration(labelText: 'Name *'),
                 validator: (value) {
                   if (value == null || value.isEmpty) {
@@ -78,23 +77,36 @@ class AddEditCustomerScreenState extends State<AddEditCustomerScreen> {
                   }
                   return null;
                 },
-                // When saving, we can allow the value to be null if the model supports it, 
-                // but since the validator guarantees non-empty, we can use value!
-                onSaved: (value) => _name = value!, 
+                onSaved: (value) => _name = value,
               ),
+              // Phone field (optional, but validated if filled)
               TextFormField(
-                initialValue: _phone,
+                initialValue: _phone ?? '',
                 decoration: const InputDecoration(labelText: 'Phone Number'),
                 keyboardType: TextInputType.phone,
                 onSaved: (value) => _phone = value,
+                validator: (value) {
+                  if (value != null && value.isNotEmpty && value.length < 10) {
+                    return 'Please enter a valid phone number';
+                  }
+                  return null;
+                },
               ),
+              // Email field (optional)
               TextFormField(
-                initialValue: _email,
+                initialValue: _email ?? '',
                 decoration: const InputDecoration(labelText: 'Email'),
                 keyboardType: TextInputType.emailAddress,
                 onSaved: (value) => _email = value,
+                validator: (value) {
+                  if (value != null && value.isNotEmpty && !RegExp(r'\S+@\S+\.\S+').hasMatch(value)) {
+                    return 'Please enter a valid email address';
+                  }
+                  return null;
+                },
               ),
               const SizedBox(height: 20),
+              // Save button
               ElevatedButton(
                 onPressed: _saveCustomer,
                 child: const Text('Save Customer'),
